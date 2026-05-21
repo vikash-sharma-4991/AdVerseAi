@@ -172,7 +172,31 @@ export const createProject = async(req:Request, res:Response) => {
 
 
 export const createVideo = async(req:Request, res:Response) => {
-    try{} catch(error:any){
+    const {userId} = req.auth()
+    const {projectId} = req.body;
+    let isCreditDeducted = false;
+
+    const user = await prisma.user.findUnique({
+        where: {id: userId}
+    })
+
+    if(!user || user.credits < 10){
+        return res.status(401).json({message:'Insufficient Credits'})
+    }
+
+    //deduct credits for video generations
+    await prisma.user.update({
+        where:{id: userId},
+        data:{credits:{decrement:10}}
+    }).then(() => {isCreditDeducted = true});
+
+
+    try{
+        const project = await prisma.project.findUnique({
+            where:{id: projectId, userId},
+            include:{user: true}
+        })
+    } catch(error:any){
         res.status(500).json({message:error.message})
     }
 }
